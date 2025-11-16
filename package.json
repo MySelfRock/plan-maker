@@ -1,0 +1,30 @@
+{
+  "name": "planmaker-saas",
+  "version": "1.0.0",
+  "private": true,
+  "description": "White-label SaaS for personalized activity planning with AI",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "dev:api": "yarn workspace @planmaker/api dev",
+    "dev:frontend": "yarn workspace @planmaker/frontend dev",
+    "dev:worker": "yarn workspace @planmaker/worker dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "migrate:dev": "yarn workspace @planmaker/api migrate:dev",
+    "migrate:prod": "yarn workspace @planmaker/api migrate:prod",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
+  },
+  "devDependencies": {
+    "turbo": "^1.10.16"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "yarn": ">=1.22.0"
+  }
+}
