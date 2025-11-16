@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { validate } from './config/env.validation';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { LoggerModule } from './common/logger/logger.module';
 import { CacheModule } from './common/cache/cache.module';
@@ -24,10 +25,11 @@ import { WebhookModule } from './modules/webhook/webhook.module';
 
 @Module({
   imports: [
-    // Configuration
+    // Configuration with validation
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
+      validate,
     }),
 
     // Rate limiting
