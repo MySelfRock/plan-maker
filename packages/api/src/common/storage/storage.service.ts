@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as AWS from 'aws-sdk';
 
@@ -56,7 +56,7 @@ export class StorageService {
       return url;
     } catch (error) {
       this.logger.error(`Failed to upload file: ${key}`, error);
-      throw new Error(`File upload failed: ${error.message}`);
+      throw new InternalServerErrorException(`File upload failed: ${error.message}`);
     }
   }
 
@@ -96,7 +96,7 @@ export class StorageService {
       this.logger.log(`File deleted: ${key}`);
     } catch (error) {
       this.logger.error(`Failed to delete file: ${key}`, error);
-      throw new Error(`File deletion failed: ${error.message}`);
+      throw new InternalServerErrorException(`File deletion failed: ${error.message}`);
     }
   }
 

@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Patch, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, UseGuards, UnauthorizedException } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { PlanService } from './plan.service';
 import { PlanGenerationService } from './plan-generation.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -29,13 +30,14 @@ export class PlanController {
 
     // Check if user owns this plan
     if (plan.userId !== user.id) {
-      throw new Error('Unauthorized');
+      throw new UnauthorizedException('You do not have permission to access this plan');
     }
 
     return plan;
   }
 
   @Post('generate')
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute for expensive AI operations
   @ApiOperation({ summary: 'Generate new plan (async)' })
   async generatePlan(@CurrentUser() user: User, @Body() body: any) {
     // Queue the plan generation job
@@ -51,6 +53,7 @@ export class PlanController {
   }
 
   @Post('generate-sync')
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // Even stricter for sync AI operations (3/min)
   @ApiOperation({ summary: 'Generate new plan (synchronous, for testing)' })
   async generatePlanSync(@CurrentUser() user: User, @Body() body: any) {
     // Direct generation (use with caution, can be slow)

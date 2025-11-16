@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, InternalServerErrorException, BadGatewayException } from '@nestjs/common';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ConfigService } from '@nestjs/config';
 
@@ -64,7 +64,7 @@ export class GeminiService {
       return jsonPlan;
     } catch (error) {
       this.logger.error('Failed to generate plan with Gemini', error);
-      throw new Error(`Plan generation failed: ${error.message}`);
+      throw new InternalServerErrorException(`Plan generation failed: ${error.message}`);
     }
   }
 
@@ -130,14 +130,14 @@ export class GeminiService {
 
       // Basic validation (you can add more sophisticated validation here)
       if (!parsed || typeof parsed !== 'object') {
-        throw new Error('Invalid JSON structure');
+        throw new BadGatewayException('Invalid JSON structure from AI service');
       }
 
       return parsed;
     } catch (error) {
       this.logger.error('Failed to parse JSON from Gemini response');
       this.logger.debug('Response text:', text);
-      throw new Error('AI returned invalid JSON format');
+      throw new BadGatewayException('AI service returned invalid JSON format');
     }
   }
 
@@ -152,7 +152,7 @@ export class GeminiService {
       return response.text();
     } catch (error) {
       this.logger.error('Failed to generate text with Gemini', error);
-      throw new Error(`Text generation failed: ${error.message}`);
+      throw new InternalServerErrorException(`Text generation failed: ${error.message}`);
     }
   }
 }

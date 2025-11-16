@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { GeminiService } from '../../common/gemini/gemini.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 
@@ -35,7 +35,7 @@ export class PlanGenerationService {
     });
 
     if (!profile) {
-      throw new Error('Profile not found');
+      throw new NotFoundException(`Profile with ID ${params.profileId} not found`);
     }
 
     // 2. Get or use default template
@@ -57,7 +57,9 @@ export class PlanGenerationService {
     }
 
     if (!template) {
-      throw new Error('No suitable template found');
+      throw new NotFoundException(
+        `No suitable template found for niche: ${profile.niche}, level: ${profile.level}`,
+      );
     }
 
     // 3. Get available exercises

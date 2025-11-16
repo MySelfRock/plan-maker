@@ -1,6 +1,7 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -30,6 +31,9 @@ async function bootstrap() {
       },
     }),
   );
+
+  // Global rate limiting guard
+  app.useGlobalGuards(new ThrottlerGuard({ reflector: new Reflector() }));
 
   // Swagger documentation
   const config = new DocumentBuilder()
