@@ -16,7 +16,12 @@ export class ExerciseController {
 
   @Get()
   async findAll(@CurrentUser() user: User, @Query() query: any) {
-    return this.exerciseService.findAll(user.tenantId, query);
+    const { skip, take, niche, level, tags, ...filters } = query;
+    const pagination = {
+      skip: skip ? parseInt(skip) : undefined,
+      take: take ? parseInt(take) : undefined,
+    };
+    return this.exerciseService.findAll(user.tenantId, { niche, level, tags }, pagination);
   }
 
   @Get(':id')

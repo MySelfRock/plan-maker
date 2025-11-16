@@ -5,10 +5,20 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 export class TemplateService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(tenantId: string) {
-    return this.prisma.template.findMany({
-      where: { OR: [{ tenantId }, { isPublic: true }] },
-    });
+  async findAll(tenantId: string, params?: { skip?: number; take?: number }) {
+    const where = { OR: [{ tenantId }, { isPublic: true }] };
+
+    const [templates, total] = await Promise.all([
+      this.prisma.template.findMany({
+        where,
+        skip: params?.skip || 0,
+        take: params?.take || 50,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.template.count({ where }),
+    ]);
+
+    return { templates, total, hasMore: (params?.skip || 0) + templates.length < total };
   }
 
   async findById(id: string) {

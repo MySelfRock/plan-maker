@@ -30,24 +30,38 @@ export class PlanService {
     return plan;
   }
 
-  async findUserPlans(userId: string, includeDetails = false): Promise<Plan[]> {
-    return this.prisma.plan.findMany({
-      where: { userId },
-      include: includeDetails
-        ? {
-            profile: true,
-            template: true,
-            days: {
-              include: { sessions: true },
-              orderBy: { date: 'asc' },
-            },
-          }
-        : {
-            profile: true, // Always include profile to avoid N+1
-            template: true, // Always include template to avoid N+1
+  async findUserPlans(
+    userId: string,
+    includeDetails = false,
+    params?: { skip?: number; take?: number },
+  ) {
+    const where = { userId };
+    const include = includeDetails
+      ? {
+          profile: true,
+          template: true,
+          days: {
+            include: { sessions: true },
+            orderBy: { date: 'asc' },
           },
-      orderBy: { createdAt: 'desc' },
-    });
+        }
+      : {
+          profile: true, // Always include profile to avoid N+1
+          template: true, // Always include template to avoid N+1
+        };
+
+    const [plans, total] = await Promise.all([
+      this.prisma.plan.findMany({
+        where,
+        include,
+        skip: params?.skip || 0,
+        take: params?.take || 20,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.plan.count({ where }),
+    ]);
+
+    return { plans, total, hasMore: (params?.skip || 0) + plans.length < total };
   }
 
   async updatePlanStatus(id: string, status: string): Promise<Plan> {

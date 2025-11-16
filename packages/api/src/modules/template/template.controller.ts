@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { TemplateService } from './template.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -15,8 +15,12 @@ export class TemplateController {
   constructor(private templateService: TemplateService) {}
 
   @Get()
-  async findAll(@CurrentUser() user: User) {
-    return this.templateService.findAll(user.tenantId);
+  async findAll(@CurrentUser() user: User, @Query() query: any) {
+    const pagination = {
+      skip: query.skip ? parseInt(query.skip) : undefined,
+      take: query.take ? parseInt(query.take) : undefined,
+    };
+    return this.templateService.findAll(user.tenantId, pagination);
   }
 
   @Get(':id')

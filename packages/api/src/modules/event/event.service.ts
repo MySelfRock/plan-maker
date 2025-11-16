@@ -18,15 +18,27 @@ export class EventService {
     });
   }
 
-  async getEvents(tenantId: string, filters?: { userId?: string; eventType?: string; limit?: number }) {
-    return this.prisma.event.findMany({
-      where: {
-        tenantId,
-        ...(filters?.userId && { userId: filters.userId }),
-        ...(filters?.eventType && { eventType: filters.eventType }),
-      },
-      take: filters?.limit || 100,
-      orderBy: { timestamp: 'desc' },
-    });
+  async getEvents(
+    tenantId: string,
+    filters?: { userId?: string; eventType?: string },
+    params?: { skip?: number; take?: number },
+  ) {
+    const where = {
+      tenantId,
+      ...(filters?.userId && { userId: filters.userId }),
+      ...(filters?.eventType && { eventType: filters.eventType }),
+    };
+
+    const [events, total] = await Promise.all([
+      this.prisma.event.findMany({
+        where,
+        skip: params?.skip || 0,
+        take: params?.take || 100,
+        orderBy: { timestamp: 'desc' },
+      }),
+      this.prisma.event.count({ where }),
+    ]);
+
+    return { events, total, hasMore: (params?.skip || 0) + events.length < total };
   }
 }

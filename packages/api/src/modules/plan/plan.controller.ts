@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Body, UseGuards, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, UnauthorizedException } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { PlanService } from './plan.service';
@@ -19,8 +19,12 @@ export class PlanController {
 
   @Get()
   @ApiOperation({ summary: 'Get all user plans' })
-  async getUserPlans(@CurrentUser() user: User) {
-    return this.planService.findUserPlans(user.id);
+  async getUserPlans(@CurrentUser() user: User, @Query() query: any) {
+    const pagination = {
+      skip: query.skip ? parseInt(query.skip) : undefined,
+      take: query.take ? parseInt(query.take) : undefined,
+    };
+    return this.planService.findUserPlans(user.id, false, pagination);
   }
 
   @Get(':id')

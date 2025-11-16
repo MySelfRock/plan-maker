@@ -27,12 +27,19 @@ export class UserService {
     await this.prisma.user.delete({ where: { id } });
   }
 
-  async findAll(tenantId: string, params?: { skip?: number; take?: number }): Promise<User[]> {
-    return this.prisma.user.findMany({
-      where: { tenantId },
-      skip: params?.skip || 0,
-      take: params?.take || 50,
-      orderBy: { createdAt: 'desc' },
-    });
+  async findAll(tenantId: string, params?: { skip?: number; take?: number }) {
+    const where = { tenantId };
+
+    const [users, total] = await Promise.all([
+      this.prisma.user.findMany({
+        where,
+        skip: params?.skip || 0,
+        take: params?.take || 50,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.user.count({ where }),
+    ]);
+
+    return { users, total, hasMore: (params?.skip || 0) + users.length < total };
   }
 }
