@@ -166,6 +166,7 @@ export class AuthService {
 
   /**
    * Generate JWT access and refresh tokens
+   * Uses transaction to ensure token storage and cleanup happen atomically
    */
   private async generateTokens(user: User): Promise<AuthTokens> {
     const payload: JwtPayload = {
@@ -183,30 +184,33 @@ export class AuthService {
       expiresIn: this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d',
     });
 
-    // Store refresh token in DB
-    const expiresIn = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
-    await this.prisma.refreshToken.create({
-      data: {
-        userId: user.id,
-        token: refreshToken,
-        expiresAt: new Date(Date.now() + expiresIn),
-      },
-    });
-
-    // Clean up old refresh tokens (keep only last 5)
-    const oldTokens = await this.prisma.refreshToken.findMany({
-      where: { userId: user.id },
-      orderBy: { createdAt: 'desc' },
-      skip: 5,
-    });
-
-    if (oldTokens.length > 0) {
-      await this.prisma.refreshToken.deleteMany({
-        where: {
-          id: { in: oldTokens.map((t) => t.id) },
+    // Store refresh token and clean up old ones in a transaction
+    await this.prisma.$transaction(async (tx) => {
+      // Store refresh token in DB
+      const expiresIn = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
+      await tx.refreshToken.create({
+        data: {
+          userId: user.id,
+          token: refreshToken,
+          expiresAt: new Date(Date.now() + expiresIn),
         },
       });
-    }
+
+      // Clean up old refresh tokens (keep only last 5)
+      const oldTokens = await tx.refreshToken.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: 'desc' },
+        skip: 5,
+      });
+
+      if (oldTokens.length > 0) {
+        await tx.refreshToken.deleteMany({
+          where: {
+            id: { in: oldTokens.map((t) => t.id) },
+          },
+        });
+      }
+    });
 
     return {
       accessToken,

@@ -163,72 +163,75 @@ export class PlanGenerationService {
 
   /**
    * Save AI-generated plan to database
+   * Uses transaction to ensure data consistency - all operations succeed or all fail
    */
   private async savePlanToDatabase(params: any) {
     const { userId, tenantId, profileId, templateId, planType, startDate, weeks, aiPlan } = params;
 
-    // Create plan
-    const plan = await this.prisma.plan.create({
-      data: {
-        userId,
-        tenantId,
-        profileId,
-        templateId,
-        name: aiPlan.plan_name,
-        type: planType,
-        status: 'active',
-        startDate: new Date(startDate),
-        weeks,
-        rationale: aiPlan.rationale,
-      },
-    });
-
-    // Create plan days and sessions
-    const currentDate = new Date(startDate);
-
-    for (const weekData of aiPlan.weekly_schedule) {
-      for (const dayData of weekData.days) {
-        const planDay = await this.prisma.planDay.create({
-          data: {
-            planId: plan.id,
-            date: new Date(currentDate),
-            weekday: dayData.weekday,
-            isRestDay: dayData.isRestDay || false,
-          },
-        });
-
-        // Create sessions for this day
-        if (dayData.sessions && dayData.sessions.length > 0) {
-          for (const sessionData of dayData.sessions) {
-            await this.prisma.session.create({
-              data: {
-                planDayId: planDay.id,
-                title: sessionData.title,
-                description: sessionData.description || '',
-                exercises: sessionData.exercises || [],
-                totalDuration: sessionData.duration_min || 30,
-                intensity: sessionData.intensity || 'moderate',
-                status: 'pending',
-              },
-            });
-          }
-        }
-
-        currentDate.setDate(currentDate.getDate() + 1);
-      }
-    }
-
-    // Return complete plan with days and sessions
-    return this.prisma.plan.findUnique({
-      where: { id: plan.id },
-      include: {
-        days: {
-          include: {
-            sessions: true,
-          },
-          orderBy: { date: 'asc' },
+    return this.prisma.$transaction(async (tx) => {
+      // Create plan
+      const plan = await tx.plan.create({
+        data: {
+          userId,
+          tenantId,
+          profileId,
+          templateId,
+          name: aiPlan.plan_name,
+          type: planType,
+          status: 'active',
+          startDate: new Date(startDate),
+          weeks,
+          rationale: aiPlan.rationale,
         },
-      },
+      });
+
+      // Create plan days and sessions
+      const currentDate = new Date(startDate);
+
+      for (const weekData of aiPlan.weekly_schedule) {
+        for (const dayData of weekData.days) {
+          const planDay = await tx.planDay.create({
+            data: {
+              planId: plan.id,
+              date: new Date(currentDate),
+              weekday: dayData.weekday,
+              isRestDay: dayData.isRestDay || false,
+            },
+          });
+
+          // Create sessions for this day
+          if (dayData.sessions && dayData.sessions.length > 0) {
+            for (const sessionData of dayData.sessions) {
+              await tx.session.create({
+                data: {
+                  planDayId: planDay.id,
+                  title: sessionData.title,
+                  description: sessionData.description || '',
+                  exercises: sessionData.exercises || [],
+                  totalDuration: sessionData.duration_min || 30,
+                  intensity: sessionData.intensity || 'moderate',
+                  status: 'pending',
+                },
+              });
+            }
+          }
+
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+      }
+
+      // Return complete plan with days and sessions
+      return tx.plan.findUnique({
+        where: { id: plan.id },
+        include: {
+          days: {
+            include: {
+              sessions: true,
+            },
+            orderBy: { date: 'asc' },
+          },
+        },
+      });
     });
   }
 }
