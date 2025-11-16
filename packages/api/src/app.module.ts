@@ -5,6 +5,7 @@ import { PrismaModule } from './common/prisma/prisma.module';
 import { LoggerModule } from './common/logger/logger.module';
 import { CacheModule } from './common/cache/cache.module';
 import { RetryModule } from './common/retry/retry.module';
+import { EmailModule } from './common/email/email.module';
 import { TenantModule } from './modules/tenant/tenant.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UserModule } from './modules/user/user.module';
@@ -39,6 +40,7 @@ import { HealthModule } from './modules/health/health.module';
     LoggerModule,
     CacheModule,
     RetryModule,
+    EmailModule,
     PrismaModule,
     GeminiModule,
     StorageModule,
