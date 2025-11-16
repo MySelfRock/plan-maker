@@ -7,6 +7,8 @@
     "packages/*"
   ],
   "scripts": {
+    "setup": "./scripts/setup.sh",
+    "health": "./scripts/health-check.sh",
     "dev": "turbo run dev --parallel",
     "dev:api": "yarn workspace @planmaker/api dev",
     "dev:frontend": "yarn workspace @planmaker/frontend dev",
@@ -16,9 +18,13 @@
     "lint": "turbo run lint",
     "migrate:dev": "yarn workspace @planmaker/api migrate:dev",
     "migrate:prod": "yarn workspace @planmaker/api migrate:prod",
+    "seed": "yarn workspace @planmaker/api prisma:seed",
+    "studio": "yarn workspace @planmaker/api prisma:studio",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
-    "docker:logs": "docker-compose logs -f"
+    "docker:logs": "docker-compose logs -f",
+    "docker:restart": "docker-compose restart",
+    "clean": "rm -rf node_modules packages/*/node_modules packages/*/.next packages/*/dist"
   },
   "devDependencies": {
     "turbo": "^1.10.16"

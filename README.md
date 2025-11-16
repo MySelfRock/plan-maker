@@ -28,7 +28,45 @@ packages/
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### Automated Setup (Recommended)
+
+The easiest way to get started:
+
+```bash
+git clone <repository>
+cd plan-maker
+yarn setup
+```
+
+This automated script will:
+- ✓ Check all prerequisites (Node.js, Yarn, Docker)
+- ✓ Install all dependencies
+- ✓ Start Docker services (PostgreSQL, Redis, MinIO)
+- ✓ Setup environment files
+- ✓ Run database migrations
+- ✓ Seed demo data (test users, templates, exercises)
+- ✓ Verify everything is working
+
+After setup completes, start development:
+
+```bash
+yarn dev  # Starts API, Frontend, and Worker
+```
+
+**Test Credentials:**
+- Admin: `admin@demo.com` / `admin123`
+- User: `test@demo.com` / `test123`
+
+**Access Points:**
+- Frontend: http://localhost:3001
+- API Docs: http://localhost:3000/api/docs
+- MinIO Console: http://localhost:9001
+
+### Manual Setup
+
+If you prefer manual control:
+
+#### Prerequisites
 
 - Node.js >= 18
 - Yarn >= 1.22
@@ -36,7 +74,7 @@ packages/
 - PostgreSQL 15+ (via Docker)
 - Redis 7+ (via Docker)
 
-### Local Development
+#### Steps
 
 1. **Clone and install dependencies**
 ```bash
@@ -61,6 +99,9 @@ This starts:
 cp packages/api/.env.example packages/api/.env
 cp packages/frontend/.env.example packages/frontend/.env
 cp packages/worker/.env.example packages/worker/.env
+
+# IMPORTANT: Edit packages/api/.env and add your Gemini API key
+# Get your key from: https://makersuite.google.com/app/apikey
 ```
 
 4. **Run database migrations**
@@ -68,7 +109,12 @@ cp packages/worker/.env.example packages/worker/.env
 yarn migrate:dev
 ```
 
-5. **Start development servers**
+5. **Seed demo data**
+```bash
+yarn seed
+```
+
+6. **Start development servers**
 ```bash
 # Start all services in parallel
 yarn dev
@@ -78,6 +124,22 @@ yarn dev:api       # API on http://localhost:3000
 yarn dev:frontend  # Frontend on http://localhost:3001
 yarn dev:worker    # Worker process
 ```
+
+### Verify Setup
+
+Run health checks at any time:
+
+```bash
+yarn health
+```
+
+This checks:
+- Docker containers status
+- Database connectivity
+- Redis connectivity
+- MinIO configuration
+- Environment files
+- Node.js version
 
 ## 📦 Package Structure
 
@@ -260,9 +322,63 @@ terraform apply
 - **GraphQL Playground**: http://localhost:3000/graphql
 - **Postman Collection**: `docs/postman/`
 
+## 📚 Documentation
+
+- **[README.md](README.md)** - Project overview and quick start
+- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Complete development guide with troubleshooting
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Contribution guidelines and best practices
+- **[IMPLEMENTATION.md](IMPLEMENTATION.md)** - Technical implementation details
+
+### Quick Commands
+
+| Command | Description |
+|---------|-------------|
+| `yarn setup` | Automated first-time setup |
+| `yarn health` | Check system health |
+| `yarn dev` | Start all services |
+| `yarn dev:api` | Start API only |
+| `yarn dev:frontend` | Start frontend only |
+| `yarn dev:worker` | Start worker only |
+| `yarn build` | Build all packages |
+| `yarn test` | Run all tests |
+| `yarn lint` | Run linters |
+| `yarn migrate:dev` | Run database migrations |
+| `yarn seed` | Seed demo data |
+| `yarn studio` | Open Prisma Studio |
+| `yarn docker:up` | Start Docker services |
+| `yarn docker:down` | Stop Docker services |
+| `yarn docker:logs` | View Docker logs |
+| `yarn clean` | Clean build artifacts |
+
 ## 🤝 Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines.
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
+- Development workflow
+- Coding standards
+- Commit guidelines
+- Pull request process
+- Testing requirements
+
+Quick start for contributors:
+
+```bash
+# Fork and clone the repository
+git clone https://github.com/YOUR_USERNAME/plan-maker.git
+cd plan-maker
+
+# Run automated setup
+yarn setup
+
+# Create a feature branch
+git checkout -b feature/your-feature-name
+
+# Make your changes, commit, and push
+git add .
+git commit -m "feat: add amazing feature"
+git push origin feature/your-feature-name
+
+# Open a Pull Request on GitHub
+```
 
 ## 📄 License
 
