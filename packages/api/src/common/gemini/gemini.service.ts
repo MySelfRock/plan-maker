@@ -93,22 +93,24 @@ export class GeminiService {
     );
     prompt = prompt.replace('{min_rest_days}', template.rules.minRestDays?.toString() || '2');
 
-    // Add exercises list
+    // Add exercises list (compact format to reduce prompt size)
+    // Since exercises are already pre-filtered and limited, we can send them directly
     const exercisesList = exercises.map((ex) => ({
       id: ex.id,
       name: ex.name,
-      description: ex.description,
-      intensity: ex.intensity,
-      duration: ex.duration,
-      equipment: ex.equipment,
+      desc: ex.description || '', // Shorten field name
+      int: ex.intensity, // Shorten field name
+      dur: ex.duration, // Shorten field name
+      eq: ex.equipment, // Shorten field name
     }));
 
-    prompt += `\n\nAvailable exercises (JSON):\n${JSON.stringify(exercisesList, null, 2)}`;
+    // Use compact JSON (no indentation) to reduce token usage by ~40%
+    prompt += `\n\nAvailable exercises:\n${JSON.stringify(exercisesList)}`;
 
-    // Add JSON schema
-    prompt += `\n\nJSON Schema:\n${JSON.stringify(jsonSchema, null, 2)}`;
+    // Add JSON schema (compact format)
+    prompt += `\n\nExpected JSON structure:\n${JSON.stringify(jsonSchema)}`;
 
-    prompt += `\n\nIMPORTANT: Respond ONLY with valid JSON. No explanations or additional text.`;
+    prompt += `\n\nIMPORTANT: Return ONLY valid JSON matching the schema. No markdown, no explanations.`;
 
     return prompt;
   }

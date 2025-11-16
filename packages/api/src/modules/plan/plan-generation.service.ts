@@ -1,4 +1,6 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { GeminiService } from '../../common/gemini/gemini.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
 
@@ -9,11 +11,16 @@ import { PrismaService } from '../../common/prisma/prisma.service';
 @Injectable()
 export class PlanGenerationService {
   private readonly logger = new Logger(PlanGenerationService.name);
+  private readonly planSchemaCache: any; // Static schema, initialized once
 
   constructor(
     private gemini: GeminiService,
     private prisma: PrismaService,
-  ) {}
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {
+    // Initialize static plan schema once (no need to rebuild every time)
+    this.planSchemaCache = this.buildPlanSchema();
+  }
 
   /**
    * Generate a new plan using AI + rules
@@ -62,20 +69,15 @@ export class PlanGenerationService {
       );
     }
 
-    // 3. Get available exercises
-    const exercises = await this.prisma.exercise.findMany({
-      where: {
-        tenantId: params.tenantId,
-        niche: profile.niche,
-        equipment: {
-          hasSome: profile.equipment.length > 0 ? profile.equipment : undefined,
-        },
-      },
-      take: 50, // limit for AI context
-    });
+    // 3. Get available exercises (cached)
+    const exercises = await this.getCachedExercises(
+      params.tenantId,
+      profile.niche,
+      profile.equipment,
+    );
 
-    // 4. Build JSON schema for AI output
-    const jsonSchema = this.buildPlanSchema();
+    // 4. Use cached JSON schema
+    const jsonSchema = this.planSchemaCache;
 
     // 5. Call Gemini to generate plan
     const aiPlan = await this.gemini.generatePlan({
@@ -111,6 +113,50 @@ export class PlanGenerationService {
     this.logger.log(`Plan generated successfully: ${plan.id}`);
 
     return plan;
+  }
+
+  /**
+   * Get exercises for plan generation with caching
+   * Exercises are cached for 10 minutes since they rarely change
+   */
+  private async getCachedExercises(
+    tenantId: string,
+    niche: string,
+    equipment: string[],
+  ): Promise<any[]> {
+    const cacheKey = `exercises:${tenantId}:${niche}:${equipment.sort().join(',')}`;
+    const cached = await this.cacheManager.get<any[]>(cacheKey);
+
+    if (cached) {
+      this.logger.debug(`Using cached exercises for ${niche}`);
+      return cached;
+    }
+
+    this.logger.debug(`Fetching exercises from database for ${niche}`);
+    const exercises = await this.prisma.exercise.findMany({
+      where: {
+        tenantId,
+        niche,
+        equipment: {
+          hasSome: equipment.length > 0 ? equipment : undefined,
+        },
+      },
+      take: 50, // limit for AI context
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        intensity: true,
+        duration: true,
+        equipment: true,
+        // Omit large fields like videos, detailed instructions to reduce prompt size
+      },
+    });
+
+    // Cache for 10 minutes
+    await this.cacheManager.set(cacheKey, exercises, 600000);
+
+    return exercises;
   }
 
   /**
