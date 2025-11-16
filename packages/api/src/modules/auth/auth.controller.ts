@@ -1,5 +1,5 @@
 import { Controller, Post, Body, Get, UseGuards, Req, HttpCode, HttpStatus } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { TenantService } from '../tenant/tenant.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -7,6 +7,7 @@ import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { User } from '@prisma/client';
 import { Request } from 'express';
+import { RegisterDto, LoginDto, RefreshTokenDto, LogoutDto } from './dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -18,20 +19,7 @@ export class AuthController {
 
   @Post('register')
   @ApiOperation({ summary: 'Register new user' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      required: ['email', 'password', 'name'],
-      properties: {
-        email: { type: 'string', format: 'email' },
-        password: { type: 'string', minLength: 8 },
-        name: { type: 'string' },
-        locale: { type: 'string', default: 'pt-BR' },
-        timezone: { type: 'string', default: 'America/Sao_Paulo' },
-      },
-    },
-  })
-  async register(@Req() req: Request, @Body() body: any) {
+  async register(@Req() req: Request, @Body() body: RegisterDto) {
     const hostname = req.get('host') || 'localhost';
     const tenant = await this.tenantService.resolveTenantFromHost(hostname);
 
@@ -44,17 +32,7 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Login user' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      required: ['email', 'password'],
-      properties: {
-        email: { type: 'string', format: 'email' },
-        password: { type: 'string' },
-      },
-    },
-  })
-  async login(@Req() req: Request, @Body() body: { email: string; password: string }) {
+  async login(@Req() req: Request, @Body() body: LoginDto) {
     const hostname = req.get('host') || 'localhost';
     const tenant = await this.tenantService.resolveTenantFromHost(hostname);
 
@@ -64,16 +42,7 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh access token' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      required: ['refreshToken'],
-      properties: {
-        refreshToken: { type: 'string' },
-      },
-    },
-  })
-  async refreshToken(@Body() body: { refreshToken: string }) {
+  async refreshToken(@Body() body: RefreshTokenDto) {
     return this.authService.refreshAccessToken(body.refreshToken);
   }
 
@@ -82,7 +51,7 @@ export class AuthController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Logout user' })
-  async logout(@CurrentUser() user: User, @Body() body?: { refreshToken?: string }) {
+  async logout(@CurrentUser() user: User, @Body() body?: LogoutDto) {
     await this.authService.logout(user.id, body?.refreshToken);
   }
 
@@ -106,7 +75,7 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
   @ApiOperation({ summary: 'Google OAuth callback' })
-  async googleAuthCallback(@Req() req: any) {
+  async googleAuthCallback(@Req() req: Request & { user: User }) {
     return req.user; // User is attached by GoogleStrategy
   }
 }
