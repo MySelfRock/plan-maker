@@ -1,6 +1,8 @@
 import { Injectable, Logger, InternalServerErrorException, BadGatewayException } from '@nestjs/common';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ConfigService } from '@nestjs/config';
+import { RetryService } from '../retry/retry.service';
+import { RetryPolicies, ErrorPredicates } from '../retry/retry.interface';
 
 export interface GeneratePlanInput {
   profile: {
@@ -26,7 +28,10 @@ export class GeminiService {
   private readonly genAI: GoogleGenerativeAI;
   private readonly model: string;
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    private retryService: RetryService,
+  ) {
     const apiKey = this.configService.get<string>('GEMINI_API_KEY');
     if (!apiKey || apiKey === 'your-gemini-api-key-here') {
       throw new Error(
@@ -42,6 +47,7 @@ export class GeminiService {
 
   /**
    * Generate a personalized plan using Gemini AI
+   * Includes retry logic for transient failures
    */
   async generatePlan(input: GeneratePlanInput): Promise<any> {
     try {
@@ -50,16 +56,41 @@ export class GeminiService {
       this.logger.log('Generating plan with Gemini AI...');
       this.logger.debug(`Prompt length: ${prompt.length} characters`);
 
-      const model = this.genAI.getGenerativeModel({ model: this.model });
+      // Use retry with critical policy (5 attempts, 2s-60s backoff)
+      // Only retry on transient errors (network, rate limit, server errors)
+      const { result } = await this.retryService.executeWithRetry(
+        async () => {
+          const model = this.genAI.getGenerativeModel({ model: this.model });
+          const result = await model.generateContent(prompt);
+          const response = await result.response;
+          return response.text();
+        },
+        {
+          ...RetryPolicies.CRITICAL,
+          shouldRetry: (error) => {
+            // Retry on transient errors, but not on quota/auth errors
+            const isQuotaError = error?.message?.includes('quota') || error?.message?.includes('RESOURCE_EXHAUSTED');
+            const isAuthError = error?.message?.includes('API key') || error?.message?.includes('permission');
 
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const text = response.text();
+            if (isQuotaError || isAuthError) {
+              this.logger.error(`Non-retryable error: ${error.message}`);
+              return false;
+            }
+
+            return ErrorPredicates.isTransientError(error);
+          },
+          onRetry: (attempt, error, delay) => {
+            this.logger.warn(
+              `AI generation attempt ${attempt} failed: ${error.message}. Retrying in ${delay}ms...`,
+            );
+          },
+        },
+      );
 
       this.logger.log('Plan generated successfully');
 
       // Parse and validate JSON
-      const jsonPlan = this.extractAndValidateJSON(text, input.jsonSchema);
+      const jsonPlan = this.extractAndValidateJSON(result, input.jsonSchema);
 
       return jsonPlan;
     } catch (error) {
@@ -145,13 +176,25 @@ export class GeminiService {
 
   /**
    * Generate text completion (for general AI tasks)
+   * Includes retry logic for transient failures
    */
   async generateText(prompt: string): Promise<string> {
     try {
-      const model = this.genAI.getGenerativeModel({ model: this.model });
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      return response.text();
+      // Use retry with standard policy (3 attempts, 1s-10s backoff)
+      const { result } = await this.retryService.executeWithRetry(
+        async () => {
+          const model = this.genAI.getGenerativeModel({ model: this.model });
+          const result = await model.generateContent(prompt);
+          const response = await result.response;
+          return response.text();
+        },
+        {
+          ...RetryPolicies.STANDARD,
+          shouldRetry: ErrorPredicates.isTransientError,
+        },
+      );
+
+      return result;
     } catch (error) {
       this.logger.error('Failed to generate text with Gemini', error);
       throw new InternalServerErrorException(`Text generation failed: ${error.message}`);
