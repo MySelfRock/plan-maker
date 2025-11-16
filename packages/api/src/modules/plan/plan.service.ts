@@ -30,9 +30,22 @@ export class PlanService {
     return plan;
   }
 
-  async findUserPlans(userId: string): Promise<Plan[]> {
+  async findUserPlans(userId: string, includeDetails = false): Promise<Plan[]> {
     return this.prisma.plan.findMany({
       where: { userId },
+      include: includeDetails
+        ? {
+            profile: true,
+            template: true,
+            days: {
+              include: { sessions: true },
+              orderBy: { date: 'asc' },
+            },
+          }
+        : {
+            profile: true, // Always include profile to avoid N+1
+            template: true, // Always include template to avoid N+1
+          },
       orderBy: { createdAt: 'desc' },
     });
   }

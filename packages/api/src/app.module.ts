@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { PrismaModule } from './common/prisma/prisma.module';
 import { LoggerModule } from './common/logger/logger.module';
+import { CacheModule } from './common/cache/cache.module';
 import { TenantModule } from './modules/tenant/tenant.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { UserModule } from './modules/user/user.module';
@@ -35,6 +36,7 @@ import { HealthModule } from './modules/health/health.module';
 
     // Common modules
     LoggerModule,
+    CacheModule,
     PrismaModule,
     GeminiModule,
     StorageModule,

@@ -4,6 +4,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import helmet from 'helmet';
+import * as compression from 'compression';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -11,6 +12,22 @@ async function bootstrap() {
 
   // Use Winston logger
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
+
+  // Enable compression (gzip/deflate)
+  app.use(
+    compression({
+      filter: (req, res) => {
+        // Don't compress responses if this request header is present
+        if (req.headers['x-no-compression']) {
+          return false;
+        }
+        // Use compression filter function
+        return compression.filter(req, res);
+      },
+      level: 6, // Compression level (0-9), 6 is a good balance
+      threshold: 1024, // Only compress responses > 1KB
+    }),
+  );
 
   // Security headers with Helmet
   app.use(

@@ -1,27 +1,60 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { Tenant } from '@prisma/client';
 
 @Injectable()
 export class TenantService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+  ) {}
 
   /**
    * Find tenant by slug (subdomain or custom identifier)
+   * Cached for 5 minutes since tenant config rarely changes
    */
   async findBySlug(slug: string): Promise<Tenant | null> {
-    return this.prisma.tenant.findUnique({
+    const cacheKey = `tenant:slug:${slug}`;
+    const cached = await this.cacheManager.get<Tenant>(cacheKey);
+
+    if (cached) {
+      return cached;
+    }
+
+    const tenant = await this.prisma.tenant.findUnique({
       where: { slug },
     });
+
+    if (tenant) {
+      await this.cacheManager.set(cacheKey, tenant, 300000); // 5 minutes
+    }
+
+    return tenant;
   }
 
   /**
    * Find tenant by custom domain
+   * Cached for 5 minutes
    */
   async findByCustomDomain(domain: string): Promise<Tenant | null> {
-    return this.prisma.tenant.findUnique({
+    const cacheKey = `tenant:domain:${domain}`;
+    const cached = await this.cacheManager.get<Tenant>(cacheKey);
+
+    if (cached) {
+      return cached;
+    }
+
+    const tenant = await this.prisma.tenant.findUnique({
       where: { customDomain: domain },
     });
+
+    if (tenant) {
+      await this.cacheManager.set(cacheKey, tenant, 300000); // 5 minutes
+    }
+
+    return tenant;
   }
 
   /**
@@ -124,12 +157,21 @@ export class TenantService {
 
   /**
    * Update tenant
+   * Invalidates cache on update
    */
   async update(id: string, data: Partial<Tenant>): Promise<Tenant> {
-    return this.prisma.tenant.update({
+    const tenant = await this.prisma.tenant.update({
       where: { id },
       data,
     });
+
+    // Invalidate cache
+    await this.cacheManager.del(`tenant:slug:${tenant.slug}`);
+    if (tenant.customDomain) {
+      await this.cacheManager.del(`tenant:domain:${tenant.customDomain}`);
+    }
+
+    return tenant;
   }
 
   /**
@@ -150,10 +192,19 @@ export class TenantService {
 
   /**
    * Delete tenant (super admin only, dangerous!)
+   * Invalidates cache on delete
    */
   async delete(id: string): Promise<void> {
+    const tenant = await this.findById(id);
+
     await this.prisma.tenant.delete({
       where: { id },
     });
+
+    // Invalidate cache
+    await this.cacheManager.del(`tenant:slug:${tenant.slug}`);
+    if (tenant.customDomain) {
+      await this.cacheManager.del(`tenant:domain:${tenant.customDomain}`);
+    }
   }
 }
