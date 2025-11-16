@@ -8,6 +8,10 @@ import { PlanAnalyticsService } from './plan-analytics.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from '@prisma/client';
+import { PaginationDto } from '../../common/dto/pagination.dto';
+import { CreatePlanDto } from './dto/create-plan.dto';
+import { CompleteSessionDto } from './dto/complete-session.dto';
+import { UpdatePlanStatusDto } from './dto/update-plan-status.dto';
 
 @ApiTags('plans')
 @Controller('plans')
@@ -23,12 +27,8 @@ export class PlanController {
 
   @Get()
   @ApiOperation({ summary: 'Get all user plans' })
-  async getUserPlans(@CurrentUser() user: User, @Query() query: any) {
-    const pagination = {
-      skip: query.skip ? parseInt(query.skip) : undefined,
-      take: query.take ? parseInt(query.take) : undefined,
-    };
-    return this.planService.findUserPlans(user.id, false, pagination);
+  async getUserPlans(@CurrentUser() user: User, @Query() query: PaginationDto) {
+    return this.planService.findUserPlans(user.id, false, query);
   }
 
   @Get(':id')
@@ -47,7 +47,7 @@ export class PlanController {
   @Post('generate')
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 requests per minute for expensive AI operations
   @ApiOperation({ summary: 'Generate new plan (async)' })
-  async generatePlan(@CurrentUser() user: User, @Body() body: any) {
+  async generatePlan(@CurrentUser() user: User, @Body() body: CreatePlanDto) {
     // Queue the plan generation job
     return this.planService.requestPlanGeneration({
       userId: user.id,
@@ -63,7 +63,7 @@ export class PlanController {
   @Post('generate-sync')
   @Throttle({ default: { limit: 3, ttl: 60000 } }) // Even stricter for sync AI operations (3/min)
   @ApiOperation({ summary: 'Generate new plan (synchronous, for testing)' })
-  async generatePlanSync(@CurrentUser() user: User, @Body() body: any) {
+  async generatePlanSync(@CurrentUser() user: User, @Body() body: CreatePlanDto) {
     // Direct generation (use with caution, can be slow)
     return this.planGenerationService.generatePlan({
       userId: user.id,
@@ -81,7 +81,7 @@ export class PlanController {
   async completeSession(
     @Param('planId') planId: string,
     @Param('sessionId') sessionId: string,
-    @Body() body: { rating: number; difficulty?: number; notes?: string },
+    @Body() body: CompleteSessionDto,
   ) {
     await this.planService.completeSession(sessionId, body);
     return { message: 'Session completed successfully' };
@@ -89,7 +89,7 @@ export class PlanController {
 
   @Patch(':id/status')
   @ApiOperation({ summary: 'Update plan status' })
-  async updatePlanStatus(@Param('id') id: string, @Body() body: { status: string }) {
+  async updatePlanStatus(@Param('id') id: string, @Body() body: UpdatePlanStatusDto) {
     return this.planService.updatePlanStatus(id, body.status);
   }
 

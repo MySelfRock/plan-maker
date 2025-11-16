@@ -7,6 +7,10 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from '@prisma/client';
+import { PaginationDto } from '../../common/dto/pagination.dto';
+import { CreateTemplateDto } from './dto/create-template.dto';
+import { UpdateTemplateDto } from './dto/update-template.dto';
+import { CreateVersionDto } from './dto/create-version.dto';
 
 @ApiTags('templates')
 @Controller('templates')
@@ -19,12 +23,8 @@ export class TemplateController {
   ) {}
 
   @Get()
-  async findAll(@CurrentUser() user: User, @Query() query: any) {
-    const pagination = {
-      skip: query.skip ? parseInt(query.skip) : undefined,
-      take: query.take ? parseInt(query.take) : undefined,
-    };
-    return this.templateService.findAll(user.tenantId, pagination);
+  async findAll(@CurrentUser() user: User, @Query() query: PaginationDto) {
+    return this.templateService.findAll(user.tenantId, query);
   }
 
   @Get(':id')
@@ -35,14 +35,14 @@ export class TemplateController {
   @Post()
   @UseGuards(RolesGuard)
   @Roles('admin', 'coach')
-  async create(@CurrentUser() user: User, @Body() body: any) {
+  async create(@CurrentUser() user: User, @Body() body: CreateTemplateDto) {
     return this.templateService.create(user.tenantId, user.id, body);
   }
 
   @Put(':id')
   @UseGuards(RolesGuard)
   @Roles('admin', 'coach')
-  async update(@Param('id') id: string, @Body() body: any) {
+  async update(@Param('id') id: string, @Body() body: UpdateTemplateDto) {
     return this.templateService.update(id, body);
   }
 
@@ -63,7 +63,7 @@ export class TemplateController {
   async createVersion(
     @Param('id') id: string,
     @CurrentUser() user: User,
-    @Body() body: { changes: string },
+    @Body() body: CreateVersionDto,
   ) {
     return this.versioningService.createVersion(id, user.id, body.changes);
   }

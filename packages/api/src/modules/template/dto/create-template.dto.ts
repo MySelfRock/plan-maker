@@ -1,93 +1,94 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsBoolean, IsArray, IsInt, IsJSON, IsIn, IsOptional, Min, Max, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsInt, IsEnum, IsObject, Min, Max } from 'class-validator';
+import { Type } from 'class-transformer';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-const VALID_NICHES = ['fitness', 'music', 'study', 'skills'];
-const VALID_LEVELS = ['beginner', 'intermediate', 'advanced', 'expert'];
-const VALID_TYPES = ['weekly', 'monthly', '12-week'];
+export enum TemplateNiche {
+  FITNESS = 'fitness',
+  MUSIC = 'music',
+  STUDY = 'study',
+  SKILLS = 'skills',
+}
+
+export enum TemplateLevel {
+  BEGINNER = 'beginner',
+  INTERMEDIATE = 'intermediate',
+  ADVANCED = 'advanced',
+}
 
 export class CreateTemplateDto {
   @ApiProperty({
     description: 'Template name',
-    example: 'Beginner Weight Loss Program',
+    example: 'Beginner Fitness Program',
   })
   @IsString()
-  @MaxLength(200)
   name: string;
 
   @ApiProperty({
     description: 'Template description',
-    example: 'A 12-week program designed for beginners...',
+    example: 'A comprehensive 12-week fitness program for beginners',
   })
   @IsString()
-  @MaxLength(1000)
   description: string;
 
   @ApiProperty({
-    description: 'Activity niche',
-    enum: VALID_NICHES,
-    example: 'fitness',
+    description: 'Template niche/category',
+    enum: TemplateNiche,
+    example: TemplateNiche.FITNESS,
   })
-  @IsString()
-  @IsIn(VALID_NICHES)
-  niche: string;
+  @IsEnum(TemplateNiche)
+  niche: TemplateNiche;
 
   @ApiProperty({
     description: 'Target skill level',
-    enum: VALID_LEVELS,
-    example: 'beginner',
+    enum: TemplateLevel,
+    example: TemplateLevel.BEGINNER,
   })
-  @IsString()
-  @IsIn(VALID_LEVELS)
-  level: string;
+  @IsEnum(TemplateLevel)
+  level: TemplateLevel;
 
   @ApiProperty({
-    description: 'Template type',
-    enum: VALID_TYPES,
-    example: '12-week',
+    description: 'AI prompt template for plan generation',
+    example: 'Generate a {level} {niche} plan for {weeks} weeks...',
   })
   @IsString()
-  @IsIn(VALID_TYPES)
-  type: string;
+  aiPromptTemplate: string;
 
-  @ApiProperty({
-    description: 'Number of weeks',
+  @ApiPropertyOptional({
+    description: 'Default number of weeks',
+    minimum: 1,
+    maximum: 52,
+    default: 12,
     example: 12,
-    required: false,
   })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(52)
   weeks?: number;
 
-  @ApiProperty({
-    description: 'Template rules (JSON)',
-    example: { maxHighIntensityPerWeek: 2, minRestDays: 2 },
+  @ApiPropertyOptional({
+    description: 'Template rules/configuration',
+    example: { sessionsPerWeek: 3, sessionDuration: 60 },
   })
-  @IsJSON()
-  rules: any;
+  @IsOptional()
+  @IsObject()
+  rules?: Record<string, any>;
 
-  @ApiProperty({
-    description: 'AI prompt template',
-    example: 'Generate a plan for {level} users...',
+  @ApiPropertyOptional({
+    description: 'Sample sessions for this template',
+    example: [{ title: 'Full Body Workout', duration: 60 }],
   })
-  @IsString()
-  aiPromptTemplate: string;
+  @IsOptional()
+  @IsObject()
+  sampleSessions?: Record<string, any>;
 
-  @ApiProperty({
-    description: 'Make template public',
-    example: false,
+  @ApiPropertyOptional({
+    description: 'Whether template is public/available to all users',
     default: false,
+    example: true,
   })
+  @IsOptional()
   @IsBoolean()
-  isPublic: boolean;
-
-  @ApiProperty({
-    description: 'Template tags',
-    type: [String],
-    example: ['weight-loss', 'beginner'],
-  })
-  @IsArray()
-  @IsString({ each: true })
-  tags: string[];
+  isPublic?: boolean;
 }
