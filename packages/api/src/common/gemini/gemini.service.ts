@@ -3,6 +3,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ConfigService } from '@nestjs/config';
 import { RetryService } from '../retry/retry.service';
 import { RetryPolicies, ErrorPredicates } from '../retry/retry.interface';
+import { getPromptTemplate } from './prompt-templates';
 
 export interface GeneratePlanInput {
   profile: {
@@ -12,6 +13,7 @@ export interface GeneratePlanInput {
     availability: any;
     equipment: string[];
     constraints: string[];
+    locale?: string; // User's preferred language
   };
   template: {
     aiPromptTemplate: string;
@@ -101,11 +103,18 @@ export class GeminiService {
 
   /**
    * Build prompt from template and input data
+   * Supports multi-language templates based on user locale
    */
   private buildPrompt(input: GeneratePlanInput): string {
     const { profile, template, exercises, jsonSchema } = input;
 
+    // Use multi-language template if locale is specified and no custom template
     let prompt = template.aiPromptTemplate;
+
+    // If template is default/empty and locale is specified, use localized template
+    if (profile.locale && (!template.aiPromptTemplate || template.aiPromptTemplate.includes('{niche}'))) {
+      prompt = getPromptTemplate(profile.locale, 'planGeneration');
+    }
 
     // Replace placeholders
     prompt = prompt.replace('{niche}', profile.niche);
