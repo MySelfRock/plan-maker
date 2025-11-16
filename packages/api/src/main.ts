@@ -6,12 +6,20 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import helmet from 'helmet';
 import * as compression from 'compression';
 import { AppModule } from './app.module';
+import { initializeSentry } from './common/sentry/sentry.config';
+import { SentryInterceptor } from './common/sentry/sentry.interceptor';
 
 async function bootstrap() {
+  // Initialize Sentry first to catch all errors
+  initializeSentry();
+
   const app = await NestFactory.create(AppModule);
 
   // Use Winston logger
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
+
+  // Global Sentry interceptor for error tracking
+  app.useGlobalInterceptors(new SentryInterceptor());
 
   // Enable compression (gzip/deflate)
   app.use(
