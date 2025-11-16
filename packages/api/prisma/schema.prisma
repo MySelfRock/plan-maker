@@ -74,6 +74,8 @@ model User {
   @@unique([tenantId, email]) // unique email per tenant
   @@index([tenantId])
   @@index([email])
+  @@index([tenantId, role]) // For filtering users by role within tenant
+  @@index([emailVerified]) // For finding unverified users
   @@map("users")
 }
 
@@ -89,6 +91,7 @@ model RefreshToken {
 
   @@index([userId])
   @@index([token])
+  @@index([expiresAt]) // For cleanup of expired tokens
   @@map("refresh_tokens")
 }
 
@@ -121,6 +124,7 @@ model Profile {
   @@index([userId])
   @@index([tenantId])
   @@index([niche])
+  @@index([tenantId, niche, level]) // For filtering profiles by niche and level
   @@map("profiles")
 }
 
@@ -223,6 +227,9 @@ model Plan {
   @@index([userId])
   @@index([tenantId])
   @@index([status])
+  @@index([userId, status]) // For fetching user's active/completed plans
+  @@index([tenantId, status, createdAt]) // For tenant dashboard, most recent plans first
+  @@index([profileId]) // For finding plans by profile
   @@map("plans")
 }
 
@@ -265,6 +272,8 @@ model Session {
 
   @@index([planDayId])
   @@index([status])
+  @@index([planDayId, status]) // For efficient queries of day's sessions by status
+  @@index([completedAt]) // For analytics on completion times
   @@map("sessions")
 }
 
@@ -299,6 +308,9 @@ model Subscription {
   @@index([tenantId])
   @@index([status])
   @@index([stripeCustomerId])
+  @@index([userId, status]) // For user subscription status queries
+  @@index([tenantId, status]) // For tenant subscription analytics
+  @@index([currentPeriodEnd]) // For finding expiring subscriptions
   @@map("subscriptions")
 }
 
