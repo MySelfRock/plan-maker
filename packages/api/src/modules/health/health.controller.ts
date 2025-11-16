@@ -1,8 +1,8 @@
 import { Controller, Get } from '@nestjs/common';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import {
-  HealthCheck,
   HealthCheckService,
+  HealthCheck,
   PrismaHealthIndicator,
   MemoryHealthIndicator,
   DiskHealthIndicator,
@@ -22,31 +22,58 @@ export class HealthController {
 
   @Get()
   @HealthCheck()
-  @ApiOperation({ summary: 'Overall health check' })
-  check() {
+  @ApiOperation({ summary: 'Check overall system health' })
+  @ApiResponse({ status: 200, description: 'System is healthy' })
+  @ApiResponse({ status: 503, description: 'Service unavailable' })
+  async check() {
     return this.health.check([
       () => this.prismaHealth.pingCheck('database', this.prisma),
-      () => this.memory.checkHeap('memory_heap', 300 * 1024 * 1024), // 300MB
-      () => this.memory.checkRSS('memory_rss', 500 * 1024 * 1024), // 500MB
-      () => this.disk.checkStorage('disk', { path: '/', thresholdPercent: 0.9 }),
+      () => this.memory.checkHeap('memory_heap', 150 * 1024 * 1024),
+      () => this.memory.checkRSS('memory_rss', 300 * 1024 * 1024),
+      () => this.disk.checkStorage('disk', { path: '/', thresholdPercent: 0.5 }),
     ]);
   }
 
-  @Get('readiness')
+  @Get('live')
+  @ApiOperation({ summary: 'Liveness probe (for Kubernetes)' })
+  @ApiResponse({ status: 200, description: 'Service is alive' })
+  async live() {
+    return { status: 'ok', timestamp: new Date().toISOString() };
+  }
+
+  @Get('ready')
   @HealthCheck()
-  @ApiOperation({ summary: 'Readiness probe (database only)' })
-  readiness() {
+  @ApiOperation({ summary: 'Readiness probe (for Kubernetes)' })
+  @ApiResponse({ status: 200, description: 'Service is ready' })
+  @ApiResponse({ status: 503, description: 'Service is not ready' })
+  async ready() {
     return this.health.check([
       () => this.prismaHealth.pingCheck('database', this.prisma),
     ]);
   }
 
-  @Get('liveness')
-  @ApiOperation({ summary: 'Liveness probe' })
-  liveness() {
+  @Get('metrics')
+  @ApiOperation({ summary: 'Get basic metrics' })
+  @ApiResponse({ status: 200, description: 'Metrics retrieved' })
+  async metrics() {
+    const memoryUsage = process.memoryUsage();
+    const uptime = process.uptime();
+
     return {
-      status: 'ok',
       timestamp: new Date().toISOString(),
+      uptime: {
+        seconds: Math.floor(uptime),
+      },
+      memory: {
+        heapUsed: Math.round(memoryUsage.heapUsed / 1024 / 1024),
+        heapTotal: Math.round(memoryUsage.heapTotal / 1024 / 1024),
+        rss: Math.round(memoryUsage.rss / 1024 / 1024),
+      },
+      process: {
+        pid: process.pid,
+        version: process.version,
+        platform: process.platform,
+      },
     };
   }
 }

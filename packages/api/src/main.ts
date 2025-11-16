@@ -3,11 +3,14 @@ import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
 import * as compression from 'compression';
 import { AppModule } from './app.module';
 import { initializeSentry } from './common/sentry/sentry.config';
 import { SentryInterceptor } from './common/sentry/sentry.interceptor';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
 async function bootstrap() {
   // Initialize Sentry first to catch all errors
@@ -18,8 +21,15 @@ async function bootstrap() {
   // Use Winston logger
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
-  // Global Sentry interceptor for error tracking
-  app.useGlobalInterceptors(new SentryInterceptor());
+  // Global exception filter for consistent error responses
+  const configService = app.get(ConfigService);
+  app.useGlobalFilters(new HttpExceptionFilter(configService));
+
+  // Global interceptors
+  app.useGlobalInterceptors(
+    new LoggingInterceptor(), // HTTP request/response logging
+    new SentryInterceptor(), // Error tracking
+  );
 
   // Enable compression (gzip/deflate)
   app.use(
