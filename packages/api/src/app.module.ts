@@ -20,6 +20,7 @@ import { StorageModule } from './common/storage/storage.module';
 import { QueueModule } from './common/queue/queue.module';
 import { EventModule } from './modules/event/event.module';
 import { HealthModule } from './modules/health/health.module';
+import { WebhookModule } from './modules/webhook/webhook.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { HealthModule } from './modules/health/health.module';
     ExerciseModule,
     SubscriptionModule,
     EventModule,
+    WebhookModule,
   ],
 })
 export class AppModule {}
