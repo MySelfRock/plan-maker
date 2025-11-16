@@ -14,6 +14,7 @@ import { GeminiModule } from './common/gemini/gemini.module';
 import { StorageModule } from './common/storage/storage.module';
 import { QueueModule } from './common/queue/queue.module';
 import { EventModule } from './modules/event/event.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { EventModule } from './modules/event/event.module';
     QueueModule,
 
     // Feature modules
+    HealthModule,
     TenantModule,
     AuthModule,
     UserModule,

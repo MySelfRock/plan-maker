@@ -6,7 +6,24 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   constructor() {
     super({
       log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-    });
+      datasources: {
+        db: {
+          url: process.env.DATABASE_URL,
+        },
+      },
+      // Connection pool configuration
+      // See: https://www.prisma.io/docs/concepts/components/prisma-client/working-with-prismaclient/connection-management
+      __internal: {
+        engine: {
+          // Connection pool size (default: num_cpus * 2 + 1)
+          // For production, adjust based on your server capacity
+          connection_limit: parseInt(process.env.DATABASE_CONNECTION_LIMIT || '10', 10),
+
+          // Connection timeout in seconds
+          pool_timeout: parseInt(process.env.DATABASE_POOL_TIMEOUT || '10', 10),
+        },
+      },
+    } as any); // Type assertion needed for __internal
   }
 
   async onModuleInit() {

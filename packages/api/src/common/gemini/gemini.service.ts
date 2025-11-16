@@ -28,11 +28,16 @@ export class GeminiService {
 
   constructor(private configService: ConfigService) {
     const apiKey = this.configService.get<string>('GEMINI_API_KEY');
-    if (!apiKey) {
-      this.logger.warn('GEMINI_API_KEY not set. AI features will not work.');
+    if (!apiKey || apiKey === 'your-gemini-api-key-here') {
+      throw new Error(
+        'GEMINI_API_KEY is required but not configured. ' +
+        'Please set a valid Gemini API key in your .env file. ' +
+        'Get your API key from: https://makersuite.google.com/app/apikey'
+      );
     }
-    this.genAI = new GoogleGenerativeAI(apiKey || 'dummy-key');
+    this.genAI = new GoogleGenerativeAI(apiKey);
     this.model = this.configService.get<string>('GEMINI_MODEL') || 'gemini-pro';
+    this.logger.log(`Gemini AI initialized with model: ${this.model}`);
   }
 
   /**
