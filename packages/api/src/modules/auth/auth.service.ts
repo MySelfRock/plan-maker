@@ -4,6 +4,8 @@ import { ConfigService } from '@nestjs/config';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { User } from '@prisma/client';
+import { WebhookService } from '../webhook/webhook.service';
+import { WebhookEvent } from '../webhook/webhook.types';
 
 export interface AuthTokens {
   accessToken: string;
@@ -24,6 +26,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private webhookService: WebhookService,
   ) {}
 
   /**
@@ -64,6 +67,14 @@ export class AuthService {
 
     // Generate tokens
     const tokens = await this.generateTokens(user);
+
+    // Trigger webhook for new user registration
+    await this.webhookService.trigger(user.tenantId, WebhookEvent.USER_REGISTERED, {
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    });
 
     const { passwordHash: _, ...userWithoutPassword } = user;
     return { user: userWithoutPassword, tokens };
@@ -263,6 +274,15 @@ export class AuthService {
         },
       });
       isNewUser = true;
+
+      // Trigger webhook for new user registration via OAuth
+      await this.webhookService.trigger(user.tenantId, WebhookEvent.USER_REGISTERED, {
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        authProvider: data.provider,
+      });
     } else {
       // Update last login
       user = await this.prisma.user.update({

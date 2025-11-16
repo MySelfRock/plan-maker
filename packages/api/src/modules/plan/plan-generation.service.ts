@@ -3,6 +3,8 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { GeminiService } from '../../common/gemini/gemini.service';
 import { PrismaService } from '../../common/prisma/prisma.service';
+import { WebhookService } from '../webhook/webhook.service';
+import { WebhookEvent } from '../webhook/webhook.types';
 
 /**
  * Service responsible for AI-powered plan generation
@@ -17,6 +19,7 @@ export class PlanGenerationService {
     private gemini: GeminiService,
     private prisma: PrismaService,
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private webhookService: WebhookService,
   ) {
     // Initialize static plan schema once (no need to rebuild every time)
     this.planSchemaCache = this.buildPlanSchema();
@@ -111,6 +114,18 @@ export class PlanGenerationService {
     });
 
     this.logger.log(`Plan generated successfully: ${plan.id}`);
+
+    // Trigger webhook for plan creation
+    await this.webhookService.trigger(params.tenantId, WebhookEvent.PLAN_GENERATED, {
+      planId: plan.id,
+      userId: params.userId,
+      profileId: params.profileId,
+      templateId: template.id,
+      planName: plan.name,
+      planType: plan.type,
+      weeks: plan.weeks,
+      startDate: plan.startDate,
+    });
 
     return plan;
   }

@@ -8,6 +8,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { UserModule } from '../user/user.module';
 import { TenantModule } from '../tenant/tenant.module';
+import { WebhookModule } from '../webhook/webhook.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { TenantModule } from '../tenant/tenant.module';
     }),
     UserModule,
     TenantModule,
+    WebhookModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy, GoogleStrategy],

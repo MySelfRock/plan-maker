@@ -2,12 +2,15 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../common/prisma/prisma.service';
 import { QueueService } from '../../common/queue/queue.service';
 import { Plan } from '@prisma/client';
+import { WebhookService } from '../webhook/webhook.service';
+import { WebhookEvent } from '../webhook/webhook.types';
 
 @Injectable()
 export class PlanService {
   constructor(
     private prisma: PrismaService,
     private queueService: QueueService,
+    private webhookService: WebhookService,
   ) {}
 
   async findById(id: string, includeDetails = true): Promise<Plan> {
@@ -65,10 +68,28 @@ export class PlanService {
   }
 
   async updatePlanStatus(id: string, status: string): Promise<Plan> {
-    return this.prisma.plan.update({
+    const plan = await this.prisma.plan.update({
       where: { id },
       data: { status },
     });
+
+    // Trigger webhook for plan status change
+    if (status === 'completed') {
+      await this.webhookService.trigger(plan.tenantId, WebhookEvent.PLAN_COMPLETED, {
+        planId: plan.id,
+        userId: plan.userId,
+        planName: plan.name,
+        completedAt: new Date(),
+      });
+    } else {
+      await this.webhookService.trigger(plan.tenantId, WebhookEvent.PLAN_UPDATED, {
+        planId: plan.id,
+        userId: plan.userId,
+        status,
+      });
+    }
+
+    return plan;
   }
 
   async completeSession(sessionId: string, feedback: any): Promise<void> {
@@ -84,7 +105,15 @@ export class PlanService {
     // Optionally trigger plan adjustment based on feedback
     const session = await this.prisma.session.findUnique({
       where: { id: sessionId },
-      include: { planDay: true },
+      include: { planDay: { include: { plan: true } } },
+    });
+
+    // Trigger webhook for session completion
+    await this.webhookService.trigger(session.planDay.plan.tenantId, WebhookEvent.PLAN_UPDATED, {
+      planId: session.planDay.planId,
+      sessionId: session.id,
+      sessionCompleted: true,
+      feedback,
     });
 
     if (feedback.rating && feedback.rating < 3) {

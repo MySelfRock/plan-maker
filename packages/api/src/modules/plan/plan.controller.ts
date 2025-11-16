@@ -1,8 +1,10 @@
 import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, UnauthorizedException } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { PlanService } from './plan.service';
 import { PlanGenerationService } from './plan-generation.service';
+import { PlanExportService } from './plan-export.service';
+import { PlanAnalyticsService } from './plan-analytics.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { User } from '@prisma/client';
@@ -15,6 +17,8 @@ export class PlanController {
   constructor(
     private planService: PlanService,
     private planGenerationService: PlanGenerationService,
+    private planExportService: PlanExportService,
+    private planAnalyticsService: PlanAnalyticsService,
   ) {}
 
   @Get()
@@ -87,5 +91,67 @@ export class PlanController {
   @ApiOperation({ summary: 'Update plan status' })
   async updatePlanStatus(@Param('id') id: string, @Body() body: { status: string }) {
     return this.planService.updatePlanStatus(id, body.status);
+  }
+
+  // Export endpoints
+  @Get(':id/export/json')
+  @ApiOperation({ summary: 'Export plan as JSON' })
+  @ApiResponse({ status: 200, description: 'Plan exported successfully' })
+  async exportPlanJSON(@Param('id') id: string, @CurrentUser() user: User) {
+    const plan = await this.planService.findById(id, false);
+    if (plan.userId !== user.id) {
+      throw new UnauthorizedException('You do not have permission to export this plan');
+    }
+    return this.planExportService.exportAsJSON(id);
+  }
+
+  @Get(':id/export/pdf')
+  @ApiOperation({ summary: 'Export plan as PDF-ready data' })
+  @ApiResponse({ status: 200, description: 'PDF data generated successfully' })
+  async exportPlanPDF(@Param('id') id: string, @CurrentUser() user: User) {
+    const plan = await this.planService.findById(id, false);
+    if (plan.userId !== user.id) {
+      throw new UnauthorizedException('You do not have permission to export this plan');
+    }
+    return this.planExportService.exportAsPDFData(id);
+  }
+
+  @Get(':id/summary')
+  @ApiOperation({ summary: 'Get plan summary with progress' })
+  @ApiResponse({ status: 200, description: 'Summary retrieved successfully' })
+  async getPlanSummary(@Param('id') id: string, @CurrentUser() user: User) {
+    const plan = await this.planService.findById(id, false);
+    if (plan.userId !== user.id) {
+      throw new UnauthorizedException('You do not have permission to access this plan');
+    }
+    return this.planExportService.exportSummary(id);
+  }
+
+  // Analytics endpoints
+  @Get('analytics/me')
+  @ApiOperation({ summary: 'Get current user statistics' })
+  @ApiResponse({ status: 200, description: 'User statistics retrieved successfully' })
+  async getMyStats(@CurrentUser() user: User) {
+    return this.planAnalyticsService.getUserStats(user.id);
+  }
+
+  @Get('analytics/popular-exercises')
+  @ApiOperation({ summary: 'Get popular exercises' })
+  @ApiResponse({ status: 200, description: 'Popular exercises retrieved successfully' })
+  async getPopularExercises(@CurrentUser() user: User, @Query('limit') limit?: string) {
+    return this.planAnalyticsService.getPopularExercises(
+      user.tenantId,
+      limit ? parseInt(limit) : 10,
+    );
+  }
+
+  @Get('analytics/trends')
+  @ApiOperation({ summary: 'Get plan generation trends' })
+  @ApiResponse({ status: 200, description: 'Trends retrieved successfully' })
+  async getPlanTrends(@CurrentUser() user: User, @Query('days') days?: string) {
+    return this.planAnalyticsService.getPlanGenerationTrends(
+      user.tenantId,
+      days ? parseInt(days) : 30,
+    );
   }
 }
