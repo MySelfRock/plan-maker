@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+    }
+    .header {
+      background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+      color: white;
+      padding: 40px 20px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      font-size: 28px;
+      font-weight: 600;
+    }
+    .content {
+      padding: 40px 30px;
+    }
+    .content h2 {
+      color: #1F2937;
+      font-size: 22px;
+      margin-top: 0;
+    }
+    .content p {
+      color: #4B5563;
+      font-size: 16px;
+      line-height: 1.8;
+    }
+    .cta-button {
+      display: inline-block;
+      background: #3B82F6;
+      color: white;
+      padding: 14px 32px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      margin: 20px 0;
+      transition: background 0.3s;
+    }
+    .cta-button:hover {
+      background: #2563EB;
+    }
+    .highlight-box {
+      background: #EFF6FF;
+      border-left: 4px solid #3B82F6;
+      padding: 16px;
+      margin: 20px 0;
+      border-radius: 4px;
+    }
+    .footer {
+      text-align: center;
+      padding: 30px 20px;
+      background: #F9FAFB;
+      color: #6B7280;
+      font-size: 14px;
+    }
+    .footer a {
+      color: #3B82F6;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎉 Your Plan is Ready!</h1>
+    </div>
+
+    <div class="content">
+      <h2>Hi {{userName}}!</h2>
+
+      <p>Great news! Your personalized plan <strong>{{planName}}</strong> has been generated and is ready to start.</p>
+
+      <div class="highlight-box">
+        <p style="margin: 0;"><strong>✨ What's included:</strong></p>
+        <ul style="margin: 10px 0 0 0; padding-left: 20px;">
+          <li>Day-by-day breakdown of activities</li>
+          <li>Customized to your goals and availability</li>
+          <li>Progress tracking and feedback system</li>
+          <li>Adaptive adjustments based on your performance</li>
+        </ul>
+      </div>
+
+      <p>Click the button below to view your plan and get started on your journey:</p>
+
+      <div style="text-align: center;">
+        <a href="{{planUrl}}" class="cta-button">View My Plan →</a>
+      </div>
+
+      <p style="margin-top: 30px; color: #6B7280; font-size: 14px;">
+        💡 <strong>Tip:</strong> Make sure to log your progress after each session. This helps us adjust your plan to perfectly match your pace!
+      </p>
+    </div>
+
+    <div class="footer">
+      <p>
+        You're receiving this email because you requested a plan on PlanMaker.
+      </p>
+      <p>
+        <a href="{{planUrl}}">View Plan</a> ·
+        <a href="{{frontendUrl}}/settings">Settings</a>
+      </p>
+      <p style="margin-top: 20px;">© 2025 PlanMaker. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>

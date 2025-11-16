@@ -210,7 +210,17 @@ plan-maker/
 │   │           ├── subscription/
 │   │           └── event/
 │   │
-│   ├── worker/           ⏳ Próximo passo
+│   ├── worker/           ✅ Background Jobs (COMPLETO)
+│   │   └── src/
+│   │       ├── processors/      # Job processors
+│   │       │   ├── plan-generation.processor.ts
+│   │       │   ├── email.processor.ts
+│   │       │   ├── pdf-export.processor.ts
+│   │       │   └── plan-adjustment.processor.ts
+│   │       ├── services/        # Gemini, Email, PDF
+│   │       ├── templates/       # Email templates (Handlebars)
+│   │       └── utils/           # Logger, Database
+│   │
 │   ├── frontend/         ⏳ Próximo passo
 │   └── infra/            ⏳ Próximo passo
 │
@@ -375,14 +385,74 @@ Tenant: demo
    - Billing email separado
    - Subscription tiers
 
+## ✅ FASE 2 - WORKER (IMPLEMENTADO!)
+
+### Worker Package Completo (100%)
+
+Sistema de processamento assíncrono de jobs usando BullMQ + Redis.
+
+**4 Processadores Implementados:**
+
+1. **Plan Generation Worker** ⭐
+   - Geração assíncrona de planos com Gemini AI
+   - Progress tracking (10% → 100%)
+   - Validação e persistência no banco
+   - Notificação por email ao completar
+   - Event logging
+   - Concurrency: 2 (AI é resource-intensive)
+
+2. **Email Worker** 📧
+   - Envio de emails transacionais via SMTP
+   - Templates Handlebars (plan-ready, pdf-ready)
+   - Retry automático em caso de falha
+   - Concurrency: 5
+
+3. **PDF Export Worker** 📄
+   - Geração de PDFs com PDFKit
+   - Upload para S3/MinIO
+   - Download link por email
+   - Formatação profissional (header, semanas, dias, sessões)
+   - Concurrency: 3
+
+4. **Plan Adjustment Worker** 🔧
+   - Análise de feedback do usuário
+   - Recomendações de ajuste via IA
+   - Triggers: rating < 3 ou difficulty fora de range
+   - Armazena recomendações em metadata
+   - Concurrency: 3
+
+**Serviços Implementados:**
+- `GeminiService` - Integração com IA
+- `EmailService` - Nodemailer + templates
+- `PdfService` - PDFKit + S3 upload
+- `Logger` - Winston com logs estruturados
+- `Database` - Prisma client singleton
+
+**Templates de Email:**
+- ✉️ `plan-ready.hbs` - Plano gerado com sucesso
+- ✉️ `pdf-ready.hbs` - PDF disponível para download
+
+**Features:**
+- ✅ Graceful shutdown (SIGTERM/SIGINT)
+- ✅ Error handling robusto
+- ✅ Progress tracking
+- ✅ Retry automático (3 tentativas)
+- ✅ Job cleanup automático
+- ✅ Logs estruturados (JSON)
+- ✅ Environment validation
+
+**Como usar:**
+```bash
+cd packages/worker
+yarn install
+cp .env.example .env
+# Configure GEMINI_API_KEY e SMTP
+yarn dev
+```
+
 ## 🔄 Próximos Passos
 
-### Worker (Alta Prioridade)
-- Processar jobs da fila BullMQ
-- Worker para `plan-generation` queue
-- Worker para `email` queue
-- Worker para `pdf-export` queue
-- Worker para `plan-adjustment` queue
+### Frontend Next.js (Alta Prioridade)
 
 ### Frontend (Next.js)
 - App Router com SSR
@@ -400,12 +470,25 @@ Tenant: demo
 
 ## 📊 Métricas de Código
 
-- **Linhas de código**: ~5000+ LOC
-- **Arquivos criados**: 80+
-- **Módulos NestJS**: 9
-- **Endpoints API**: 30+
-- **Tabelas no DB**: 12
-- **Tipos TypeScript**: 50+
+**Backend (API):**
+- Linhas de código: ~5000 LOC
+- Arquivos criados: 80+
+- Módulos NestJS: 9
+- Endpoints API: 30+
+- Tabelas no DB: 12
+- Tipos TypeScript: 50+
+
+**Worker:**
+- Linhas de código: ~2000 LOC
+- Arquivos criados: 15+
+- Processadores: 4
+- Queues: 4
+- Email templates: 2
+
+**Total Geral:**
+- **~7000+ LOC**
+- **95+ arquivos**
+- **TypeScript 100%**
 
 ## 🎓 Conceitos Implementados
 
