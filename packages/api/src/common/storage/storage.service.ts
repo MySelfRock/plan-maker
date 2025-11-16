@@ -31,12 +31,14 @@ export class StorageService {
 
   /**
    * Upload file to S3/MinIO
+   * @param isPublic - If true, file will be publicly accessible. Defaults to false (private).
    */
   async uploadFile(
     file: Buffer | string,
     key: string,
     bucket: 'assets' | 'exports' = 'assets',
     contentType?: string,
+    isPublic: boolean = false,
   ): Promise<string> {
     const bucketName = bucket === 'assets' ? this.bucketAssets : this.bucketExports;
 
@@ -47,12 +49,12 @@ export class StorageService {
           Key: key,
           Body: file,
           ContentType: contentType,
-          ACL: 'public-read',
+          ACL: isPublic ? 'public-read' : 'private',
         })
         .promise();
 
       const url = this.getFileUrl(key, bucket);
-      this.logger.log(`File uploaded: ${key}`);
+      this.logger.log(`File uploaded: ${key} (${isPublic ? 'public' : 'private'})`);
       return url;
     } catch (error) {
       this.logger.error(`Failed to upload file: ${key}`, error);
@@ -62,16 +64,19 @@ export class StorageService {
 
   /**
    * Get file URL
+   * @param signed - If true, generates a time-limited signed URL. Defaults to true for security.
    */
-  getFileUrl(key: string, bucket: 'assets' | 'exports' = 'assets'): string {
+  getFileUrl(key: string, bucket: 'assets' | 'exports' = 'assets', signed: boolean = true): string {
     const bucketName = bucket === 'assets' ? this.bucketAssets : this.bucketExports;
     const endpoint = this.configService.get<string>('S3_ENDPOINT');
     const useMinio = this.configService.get<string>('USE_MINIO') === 'true';
 
-    if (useMinio) {
+    // For MinIO without signed URLs (only for public files)
+    if (useMinio && !signed) {
       return `${endpoint}/${bucketName}/${key}`;
     }
 
+    // Generate signed URL for secure access (works for both AWS S3 and MinIO)
     return this.s3.getSignedUrl('getObject', {
       Bucket: bucketName,
       Key: key,
@@ -102,14 +107,21 @@ export class StorageService {
 
   /**
    * Generate pre-signed upload URL
+   * @param isPublic - If true, uploaded file will be publicly accessible. Defaults to false (private).
    */
-  async getUploadUrl(key: string, contentType: string, bucket: 'assets' | 'exports' = 'assets'): Promise<string> {
+  async getUploadUrl(
+    key: string,
+    contentType: string,
+    bucket: 'assets' | 'exports' = 'assets',
+    isPublic: boolean = false,
+  ): Promise<string> {
     const bucketName = bucket === 'assets' ? this.bucketAssets : this.bucketExports;
 
     return this.s3.getSignedUrlPromise('putObject', {
       Bucket: bucketName,
       Key: key,
       ContentType: contentType,
+      ACL: isPublic ? 'public-read' : 'private',
       Expires: 300, // 5 minutes
     });
   }
