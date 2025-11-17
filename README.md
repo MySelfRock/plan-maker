@@ -292,7 +292,75 @@ yarn test --coverage
 
 ## 🚢 Deployment
 
-### Using Docker
+### 🎬 Demo Environment (Quickest)
+
+For **sales demos and presentations**, start everything with one command:
+
+```bash
+./start-demo.sh
+```
+
+Creates a complete production-like environment with:
+- ✅ 2 multi-tenant organizations with sample data
+- ✅ PostgreSQL, Redis, MinIO (S3-compatible)
+- ✅ Full API with Swagger docs
+- ✅ Background worker service
+- ✅ Ready in 2-3 minutes!
+
+**Access:** http://localhost:3000/api/docs
+**Guide:** See [DEMO.md](./DEMO.md) for presentation flow and tips.
+
+### ☁️ AWS Production Deployment (Recommended)
+
+Deploy to AWS with **production-grade infrastructure**:
+
+```bash
+cd infrastructure/terraform
+
+# 1. Validate environment
+make validate-env ENV=dev
+
+# 2. Build and push Docker images to ECR
+make push-images VERSION=v1.0.0
+
+# 3. Deploy complete infrastructure
+make deploy ENV=dev
+```
+
+**What gets created:**
+- **VPC** with 3 AZs, public/private/database subnets
+- **ECS Fargate** for API and Worker services
+- **RDS PostgreSQL** (Multi-AZ in production)
+- **ElastiCache Redis** for caching and queues
+- **Application Load Balancer** with auto-scaling
+- **S3 + CloudFront** for static assets
+- **Secrets Manager** for credentials
+- **CloudWatch** monitoring with 9 critical alarms
+
+**Deployment time:** ~15-20 minutes
+**Cost estimates:**
+- Dev: ~$95-140/month
+- Staging: ~$215-310/month
+- Production: ~$1,140-1,800/month
+
+📚 **Quick Start:** See [infrastructure/terraform/QUICKSTART.md](./infrastructure/terraform/QUICKSTART.md)
+📖 **Full Guide:** See [infrastructure/terraform/DEPLOYMENT.md](./infrastructure/terraform/DEPLOYMENT.md)
+
+**Common commands:**
+```bash
+make plan ENV=dev          # Preview changes
+make apply ENV=dev         # Deploy infrastructure
+make output ENV=dev        # Show outputs (URLs, DNS)
+make logs ENV=dev          # Stream application logs
+make health ENV=dev        # Check API health
+make migrate ENV=dev       # Run database migrations
+make cost-estimate ENV=dev # Show monthly costs
+make destroy ENV=dev       # Destroy all resources
+```
+
+### 🐳 Docker Compose (Simple)
+
+For local development or small deployments:
 
 ```bash
 # Build all images
@@ -302,7 +370,9 @@ docker-compose -f docker-compose.prod.yml build
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
-### Using Kubernetes
+### ☸️ Kubernetes (Advanced)
+
+For self-hosted Kubernetes clusters:
 
 ```bash
 cd packages/infra/k8s
@@ -314,16 +384,6 @@ kubectl apply -f secrets/
 kubectl apply -f deployments/
 kubectl apply -f services/
 kubectl apply -f ingress/
-```
-
-### Using Terraform (AWS)
-
-```bash
-cd packages/infra/terraform/aws
-
-terraform init
-terraform plan
-terraform apply
 ```
 
 ## 📊 Monitoring
