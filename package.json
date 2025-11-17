@@ -24,6 +24,9 @@
     "docker:down": "docker-compose down",
     "docker:logs": "docker-compose logs -f",
     "docker:restart": "docker-compose restart",
+    "demo:start": "./start-demo.sh",
+    "demo:stop": "./stop-demo.sh",
+    "demo:logs": "docker-compose -f docker-compose.demo.yml logs -f",
     "clean": "rm -rf node_modules packages/*/node_modules packages/*/.next packages/*/dist"
   },
   "devDependencies": {

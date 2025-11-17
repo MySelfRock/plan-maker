@@ -62,6 +62,36 @@ yarn dev  # Starts API, Frontend, and Worker
 - API Docs: http://localhost:3000/api/docs
 - MinIO Console: http://localhost:9001
 
+### 🎬 Demo Environment (For Presentations)
+
+For sales demonstrations and presentations, use the simplified demo environment:
+
+```bash
+./start-demo.sh
+```
+
+This starts a complete, production-like environment in Docker with:
+- ✅ **2 Multi-tenant Organizations** (FitPro Academy, MusicMaster School)
+- ✅ **6 Pre-configured Users** (Admins, Coaches, Users)
+- ✅ **5 Ready-to-use Templates** (Fitness & Music)
+- ✅ **Sample Plans & Data** for immediate demonstration
+- ✅ **Complete API with Swagger** documentation
+- ✅ **Health Checks & Monitoring** endpoints
+
+**Single-command startup! Perfect for:**
+- Sales presentations to potential clients
+- Product demos for stakeholders
+- Proof of concept showcases
+- Quick feature testing
+
+**Demo Credentials:**
+- FitPro Admin: `admin@fitpro-demo.com` / `Admin123!`
+- MusicMaster Admin: `admin@musicmaster-demo.com` / `Admin123!`
+
+**Access:** http://localhost:3000/api/docs
+
+📚 **Full Demo Guide:** See [DEMO.md](./DEMO.md) for detailed presentation flow, tips, and troubleshooting.
+
 ### Manual Setup
 
 If you prefer manual control:

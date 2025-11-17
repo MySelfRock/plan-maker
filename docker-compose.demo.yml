@@ -1,0 +1,226 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: planmaker-demo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: planmaker_demo
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo123
+    ports:
+      - "5432:5432"
+    volumes:
+      - demo_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - planmaker-demo
+
+  # Redis Cache & Queue
+  redis:
+    image: redis:7-alpine
+    container_name: planmaker-demo-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - demo_redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - planmaker-demo
+
+  # MinIO (S3-compatible storage)
+  minio:
+    image: minio/minio:latest
+    container_name: planmaker-demo-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: demo
+      MINIO_ROOT_PASSWORD: demo123demo
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - demo_minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - planmaker-demo
+
+  # MinIO bucket initialization
+  minio-init:
+    image: minio/mc:latest
+    container_name: planmaker-demo-minio-init
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 10;
+      /usr/bin/mc alias set demominio http://minio:9000 demo demo123demo;
+      /usr/bin/mc mb demominio/planmaker-assets --ignore-existing;
+      /usr/bin/mc mb demominio/planmaker-exports --ignore-existing;
+      /usr/bin/mc anonymous set download demominio/planmaker-assets;
+      echo 'MinIO buckets created successfully';
+      exit 0;
+      "
+    networks:
+      - planmaker-demo
+
+  # API Service
+  api:
+    build:
+      context: .
+      dockerfile: packages/api/Dockerfile
+    container_name: planmaker-demo-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      # Node
+      NODE_ENV: production
+      PORT: 3000
+
+      # Database
+      DATABASE_URL: postgresql://demo:demo123@postgres:5432/planmaker_demo?schema=public
+
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+
+      # JWT
+      JWT_SECRET: demo-jwt-secret-change-in-production-12345678901234567890
+      JWT_REFRESH_SECRET: demo-refresh-secret-change-in-production-12345678901234567890
+      JWT_EXPIRES_IN: 1h
+      JWT_REFRESH_EXPIRES_IN: 7d
+
+      # API
+      API_PREFIX: /api/v1
+      CORS_ORIGINS: http://localhost:3001,http://localhost:3000
+
+      # AWS S3 (using MinIO)
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: demo
+      AWS_SECRET_ACCESS_KEY: demo123demo
+      AWS_S3_BUCKET: planmaker-assets
+      AWS_S3_ENDPOINT: http://minio:9000
+      S3_FORCE_PATH_STYLE: "true"
+
+      # Google AI (Demo mode - use mock responses)
+      GOOGLE_AI_API_KEY: demo-key-not-real
+      GOOGLE_AI_MODEL: gemini-pro
+
+      # Email (Demo mode - logs only)
+      SMTP_HOST: ""
+      SMTP_PORT: ""
+      SMTP_SECURE: "false"
+      SMTP_USER: ""
+      SMTP_PASS: ""
+      EMAIL_FROM: demo@planmaker-demo.local
+      EMAIL_FROM_NAME: PlanMaker Demo
+
+      # Stripe (Demo mode)
+      STRIPE_SECRET_KEY: sk_test_demo
+      STRIPE_WEBHOOK_SECRET: whsec_demo
+
+      # Sentry (Disabled for demo)
+      SENTRY_DSN: ""
+
+      # Demo Mode Flag
+      DEMO_MODE: "true"
+    ports:
+      - "3000:3000"
+    networks:
+      - planmaker-demo
+    command: >
+      sh -c "
+        echo 'Waiting for database...';
+        sleep 10;
+        echo 'Running migrations...';
+        yarn prisma:migrate:prod;
+        echo 'Seeding demo data...';
+        yarn prisma:seed:demo || echo 'Seed already exists';
+        echo 'Starting API server...';
+        yarn start:prod;
+      "
+
+  # Worker Service
+  worker:
+    build:
+      context: .
+      dockerfile: packages/worker/Dockerfile
+    container_name: planmaker-demo-worker
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+      - api
+    environment:
+      # Node
+      NODE_ENV: production
+
+      # Database
+      DATABASE_URL: postgresql://demo:demo123@postgres:5432/planmaker_demo?schema=public
+
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+
+      # AWS S3 (using MinIO)
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: demo
+      AWS_SECRET_ACCESS_KEY: demo123demo
+      AWS_S3_BUCKET: planmaker-exports
+      AWS_S3_ENDPOINT: http://minio:9000
+      S3_FORCE_PATH_STYLE: "true"
+
+      # Google AI (Demo mode)
+      GOOGLE_AI_API_KEY: demo-key-not-real
+      GOOGLE_AI_MODEL: gemini-pro
+
+      # Email (Demo mode - logs only)
+      SMTP_HOST: ""
+      SMTP_PORT: ""
+      SMTP_SECURE: "false"
+      SMTP_USER: ""
+      SMTP_PASS: ""
+      EMAIL_FROM: demo@planmaker-demo.local
+      EMAIL_FROM_NAME: PlanMaker Demo
+
+      # Demo Mode Flag
+      DEMO_MODE: "true"
+    networks:
+      - planmaker-demo
+
+volumes:
+  demo_postgres_data:
+    driver: local
+  demo_redis_data:
+    driver: local
+  demo_minio_data:
+    driver: local
+
+networks:
+  planmaker-demo:
+    driver: bridge
