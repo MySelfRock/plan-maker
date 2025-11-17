@@ -1,0 +1,36 @@
+# AWS Configuration
+aws_region  = "us-east-1"
+environment = "prod"
+
+# Domain Configuration
+domain_name = "planmaker.example.com"
+
+# ECS Configuration - API
+api_cpu            = 1024
+api_memory         = 2048
+api_desired_count  = 3
+api_min_capacity   = 2
+api_max_capacity   = 10
+
+# ECS Configuration - Worker
+worker_cpu            = 512
+worker_memory         = 1024
+worker_desired_count  = 2
+
+# RDS Configuration
+db_instance_class          = "db.r6g.large"
+db_allocated_storage       = 100
+db_max_allocated_storage   = 500
+db_backup_retention_days   = 14
+db_multi_az                = true
+
+# ElastiCache Configuration
+redis_node_type        = "cache.r6g.large"
+redis_num_cache_nodes  = 3
+
+# Monitoring
+enable_enhanced_monitoring = true
+log_retention_days         = 30
+
+# Security
+allowed_cidr_blocks = ["0.0.0.0/0"]
