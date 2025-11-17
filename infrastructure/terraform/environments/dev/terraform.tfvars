@@ -27,3 +27,13 @@ redis_num_cache_nodes = 1
 
 enable_enhanced_monitoring = false
 log_retention_days         = 7
+
+# Docker Images
+api_image    = "planmaker/api:latest"
+worker_image = "planmaker/worker:latest"
+
+# CORS
+cors_origins = "http://localhost:3001,http://localhost:3000"
+
+# Alerts
+alert_email = "dev-alerts@planmaker.io"

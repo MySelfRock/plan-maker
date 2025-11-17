@@ -173,3 +173,84 @@ variable "alert_email" {
   type        = string
   default     = ""
 }
+
+# Docker Images
+variable "api_image" {
+  description = "Docker image for API service"
+  type        = string
+  default     = "planmaker/api:latest"
+}
+
+variable "worker_image" {
+  description = "Docker image for Worker service"
+  type        = string
+  default     = "planmaker/worker:latest"
+}
+
+# External Services API Keys
+variable "gemini_api_key" {
+  description = "Google Gemini API key"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "google_client_id" {
+  description = "Google OAuth client ID"
+  type        = string
+  default     = ""
+}
+
+variable "google_client_secret" {
+  description = "Google OAuth client secret"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+# SMTP Configuration
+variable "smtp_host" {
+  description = "SMTP server hostname"
+  type        = string
+  default     = ""
+}
+
+variable "smtp_port" {
+  description = "SMTP server port"
+  type        = string
+  default     = "587"
+}
+
+variable "smtp_user" {
+  description = "SMTP username"
+  type        = string
+  default     = ""
+}
+
+variable "smtp_password" {
+  description = "SMTP password"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "email_from" {
+  description = "From email address"
+  type        = string
+  default     = "noreply@planmaker.io"
+}
+
+# Monitoring
+variable "sentry_dsn" {
+  description = "Sentry DSN for error tracking"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+# CORS
+variable "cors_origins" {
+  description = "Comma-separated list of allowed CORS origins"
+  type        = string
+  default     = "http://localhost:3001"
+}

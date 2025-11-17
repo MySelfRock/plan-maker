@@ -8,6 +8,11 @@ output "port" {
   value       = aws_elasticache_replication_group.main.port
 }
 
+output "cluster_id" {
+  description = "ElastiCache replication group ID"
+  value       = aws_elasticache_replication_group.main.id
+}
+
 output "security_group_id" {
   description = "Security group ID"
   value       = aws_security_group.redis.id
